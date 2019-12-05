@@ -109,7 +109,7 @@ void *item_trylock(uint32_t hv) {
     if (pthread_mutex_trylock(lock) == 0) {
         return lock;
     }
-    return NULL;
+    return nullptr;
 }
 
 void item_trylock_unlock(void *lock) {
@@ -126,7 +126,7 @@ static void wait_for_thread_registration(int nthreads) {
     }
 }
 
-static void register_thread_initialized(void) {
+static void register_thread_initialized() {
     pthread_mutex_lock(&init_lock);
     init_count++;
     pthread_cond_signal(&init_cond);
@@ -193,7 +193,7 @@ void pause_threads(enum pause_thread_types type) {
 // MUST be called only by parent thread
 // Note: listener thread is the "main" event base, which has exited its
 // loop in order to call this function.
-void stop_threads(void) {
+void stop_threads() {
     char buf[1];
     int i;
 
@@ -247,25 +247,25 @@ void stop_threads(void) {
  * Initializes a connection queue.
  */
 static void cq_init(CQ *cq) {
-    pthread_mutex_init(&cq->lock, NULL);
-    cq->head = NULL;
-    cq->tail = NULL;
+    pthread_mutex_init(&cq->lock, nullptr);
+    cq->head = nullptr;
+    cq->tail = nullptr;
 }
 
 /*
  * Looks for an item on a connection queue, but doesn't block if there isn't
  * one.
- * Returns the item, or NULL if no item is available
+ * Returns the item, or nullptr if no item is available
  */
 static CQ_ITEM *cq_pop(CQ *cq) {
     CQ_ITEM *item;
 
     pthread_mutex_lock(&cq->lock);
     item = cq->head;
-    if (NULL != item) {
+    if (nullptr != item) {
         cq->head = item->next;
-        if (NULL == cq->head)
-            cq->tail = NULL;
+        if (nullptr == cq->head)
+            cq->tail = nullptr;
     }
     pthread_mutex_unlock(&cq->lock);
 
@@ -276,10 +276,10 @@ static CQ_ITEM *cq_pop(CQ *cq) {
  * Adds an item to a connection queue.
  */
 static void cq_push(CQ *cq, CQ_ITEM *item) {
-    item->next = NULL;
+    item->next = nullptr;
 
     pthread_mutex_lock(&cq->lock);
-    if (NULL == cq->tail)
+    if (nullptr == cq->tail)
         cq->head = item;
     else
         cq->tail->next = item;
@@ -290,8 +290,8 @@ static void cq_push(CQ *cq, CQ_ITEM *item) {
 /*
  * Returns a fresh connection queue item.
  */
-static CQ_ITEM *cqi_new(void) {
-    CQ_ITEM *item = NULL;
+static CQ_ITEM *cqi_new() {
+    CQ_ITEM *item = nullptr;
     pthread_mutex_lock(&cqi_freelist_lock);
     if (cqi_freelist) {
         item = cqi_freelist;
@@ -299,16 +299,16 @@ static CQ_ITEM *cqi_new(void) {
     }
     pthread_mutex_unlock(&cqi_freelist_lock);
 
-    if (NULL == item) {
+    if (nullptr == item) {
         int i;
 
         /* Allocate a bunch of items at once to reduce fragmentation */
-        item = malloc(sizeof(CQ_ITEM) * ITEMS_PER_ALLOC);
-        if (NULL == item) {
+        item = static_cast<CQ_ITEM*>(malloc(sizeof(CQ_ITEM) * ITEMS_PER_ALLOC));
+        if (nullptr == item) {
             STATS_LOCK();
             stats.malloc_fails++;
             STATS_UNLOCK();
-            return NULL;
+            return nullptr;
         }
 
         /*
@@ -395,27 +395,27 @@ static void setup_thread(LIBEVENT_THREAD *me) {
         exit(1);
     }
 
-    me->new_conn_queue = malloc(sizeof(struct conn_queue));
-    if (me->new_conn_queue == NULL) {
+    me->new_conn_queue = static_cast<struct conn_queue*>(malloc(sizeof(struct conn_queue)));
+    if (me->new_conn_queue == nullptr) {
         perror("Failed to allocate memory for connection queue");
         exit(EXIT_FAILURE);
     }
     cq_init(me->new_conn_queue);
 
-    if (pthread_mutex_init(&me->stats.mutex, NULL) != 0) {
+    if (pthread_mutex_init(&me->stats.mutex, nullptr) != 0) {
         perror("Failed to initialize mutex");
         exit(EXIT_FAILURE);
     }
 
     me->suffix_cache = cache_create("suffix", SUFFIX_SIZE, sizeof(char*),
-                                    NULL, NULL);
-    if (me->suffix_cache == NULL) {
+                                    nullptr, nullptr);
+    if (me->suffix_cache == nullptr) {
         fprintf(stderr, "Failed to create suffix cache\n");
         exit(EXIT_FAILURE);
     }
 #ifdef EXTSTORE
-    me->io_cache = cache_create("io", sizeof(io_wrap), sizeof(char*), NULL, NULL);
-    if (me->io_cache == NULL) {
+    me->io_cache = cache_create("io", sizeof(io_wrap), sizeof(char*), nullptr, nullptr);
+    if (me->io_cache == nullptr) {
         fprintf(stderr, "Failed to create IO object cache\n");
         exit(EXIT_FAILURE);
     }
@@ -423,7 +423,7 @@ static void setup_thread(LIBEVENT_THREAD *me) {
 #ifdef TLS
     if (settings.ssl_enabled) {
         me->ssl_wbuf = (char *)malloc((size_t)settings.ssl_wbuf_size);
-        if (me->ssl_wbuf == NULL) {
+        if (me->ssl_wbuf == nullptr) {
             fprintf(stderr, "Failed to allocate the SSL write buffer\n");
             exit(EXIT_FAILURE);
         }
@@ -435,14 +435,14 @@ static void setup_thread(LIBEVENT_THREAD *me) {
  * Worker thread: main event loop
  */
 static void *worker_libevent(void *arg) {
-    LIBEVENT_THREAD *me = arg;
+    LIBEVENT_THREAD *me = static_cast<LIBEVENT_THREAD*>(arg);
 
     /* Any per-thread setup can happen here; memcached_thread_init() will block until
      * all threads have finished initializing.
      */
     me->l = logger_create();
     me->lru_bump_buf = item_lru_bump_buf_create();
-    if (me->l == NULL || me->lru_bump_buf == NULL) {
+    if (me->l == nullptr || me->lru_bump_buf == nullptr) {
         abort();
     }
 
@@ -458,7 +458,7 @@ static void *worker_libevent(void *arg) {
     register_thread_initialized();
 
     event_base_free(me->base);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -467,7 +467,7 @@ static void *worker_libevent(void *arg) {
  * input arrives on the libevent wakeup pipe.
  */
 static void thread_libevent_process(int fd, short which, void *arg) {
-    LIBEVENT_THREAD *me = arg;
+    LIBEVENT_THREAD *me = static_cast<LIBEVENT_THREAD*>(arg);
     CQ_ITEM *item;
     char buf[1];
     conn *c;
@@ -483,7 +483,7 @@ static void thread_libevent_process(int fd, short which, void *arg) {
     case 'c':
         item = cq_pop(me->new_conn_queue);
 
-        if (NULL == item) {
+        if (nullptr == item) {
             break;
         }
         switch (item->mode) {
@@ -491,7 +491,7 @@ static void thread_libevent_process(int fd, short which, void *arg) {
                 c = conn_new(item->sfd, item->init_state, item->event_flags,
                                    item->read_buffer_size, item->transport,
                                    me->base, item->ssl);
-                if (c == NULL) {
+                if (c == nullptr) {
                     if (IS_UDP(item->transport)) {
                         fprintf(stderr, "Can't listen for events on UDP socket\n");
                         exit(1);
@@ -511,7 +511,7 @@ static void thread_libevent_process(int fd, short which, void *arg) {
                 } else {
                     c->thread = me;
 #ifdef TLS
-                    if (settings.ssl_enabled && c->ssl != NULL) {
+                    if (settings.ssl_enabled && c->ssl != nullptr) {
                         assert(c->thread && c->thread->ssl_wbuf);
                         c->ssl_wbuf = c->thread->ssl_wbuf;
                     }
@@ -540,7 +540,7 @@ static void thread_libevent_process(int fd, short which, void *arg) {
         break;
     /* asked to stop */
     case 's':
-        event_base_loopexit(me->base, NULL);
+        event_base_loopexit(me->base, nullptr);
         break;
     }
 }
@@ -557,7 +557,7 @@ void dispatch_conn_new(int sfd, enum conn_states init_state, int event_flags,
                        int read_buffer_size, enum network_transport transport, void *ssl) {
     CQ_ITEM *item = cqi_new();
     char buf[1];
-    if (item == NULL) {
+    if (item == nullptr) {
         close(sfd);
         /* given that malloc failed this may also fail, but let's try */
         fprintf(stderr, "Failed to allocate memory for connection object\n");
@@ -594,7 +594,7 @@ void dispatch_conn_new(int sfd, enum conn_states init_state, int event_flags,
 void redispatch_conn(conn *c) {
     CQ_ITEM *item = cqi_new();
     char buf[1];
-    if (item == NULL) {
+    if (item == nullptr) {
         /* Can't cleanly redispatch connection. close it forcefully. */
         c->state = conn_closed;
         close(c->sfd);
@@ -621,7 +621,7 @@ void sidethread_conn_close(conn *c) {
         fprintf(stderr, "<%d connection closed from side thread.\n", c->sfd);
 #ifdef TLS
     if (c->ssl) {
-        c->ssl_wbuf = NULL;
+        c->ssl_wbuf = nullptr;
         SSL_shutdown(c->ssl);
         SSL_free(c->ssl);
     }
@@ -662,7 +662,7 @@ item *item_get(const char *key, const size_t nkey, conn *c, const bool do_update
 }
 
 // returns an item with the item lock held.
-// lock will still be held even if return is NULL, allowing caller to replace
+// lock will still be held even if return is nullptr, allowing caller to replace
 // an item atomically if desired.
 item *item_get_locked(const char *key, const size_t nkey, conn *c, const bool do_update, uint32_t *hv) {
     item *it;
@@ -770,7 +770,7 @@ void STATS_UNLOCK() {
     pthread_mutex_unlock(&stats_lock);
 }
 
-void threadlocal_stats_reset(void) {
+void threadlocal_stats_reset() {
     int ii;
     for (ii = 0; ii < settings.num_threads; ++ii) {
         pthread_mutex_lock(&threads[ii].stats.mutex);
@@ -846,15 +846,15 @@ void memcached_thread_init(int nthreads, void *arg) {
     int         power;
 
     for (i = 0; i < POWER_LARGEST; i++) {
-        pthread_mutex_init(&lru_locks[i], NULL);
+        pthread_mutex_init(&lru_locks[i], nullptr);
     }
-    pthread_mutex_init(&worker_hang_lock, NULL);
+    pthread_mutex_init(&worker_hang_lock, nullptr);
 
-    pthread_mutex_init(&init_lock, NULL);
-    pthread_cond_init(&init_cond, NULL);
+    pthread_mutex_init(&init_lock, nullptr);
+    pthread_cond_init(&init_cond, nullptr);
 
-    pthread_mutex_init(&cqi_freelist_lock, NULL);
-    cqi_freelist = NULL;
+    pthread_mutex_init(&cqi_freelist_lock, nullptr);
+    cqi_freelist = nullptr;
 
     /* Want a wide lock table, but don't waste memory */
     if (nthreads < 3) {
@@ -882,17 +882,17 @@ void memcached_thread_init(int nthreads, void *arg) {
     item_lock_count = hashsize(power);
     item_lock_hashpower = power;
 
-    item_locks = calloc(item_lock_count, sizeof(pthread_mutex_t));
-    if (! item_locks) {
+    item_locks = static_cast<pthread_mutex_t*>(calloc(item_lock_count, sizeof(pthread_mutex_t)));
+    if (!item_locks) {
         perror("Can't allocate item locks");
         exit(1);
     }
     for (i = 0; i < item_lock_count; i++) {
-        pthread_mutex_init(&item_locks[i], NULL);
+        pthread_mutex_init(&item_locks[i], nullptr);
     }
 
-    threads = calloc(nthreads, sizeof(LIBEVENT_THREAD));
-    if (! threads) {
+    threads = static_cast<LIBEVENT_THREAD*>(calloc(nthreads, sizeof(LIBEVENT_THREAD)));
+    if (!threads) {
         perror("Can't allocate thread descriptors");
         exit(1);
     }
@@ -924,4 +924,3 @@ void memcached_thread_init(int nthreads, void *arg) {
     wait_for_thread_registration(nthreads);
     pthread_mutex_unlock(&init_lock);
 }
-

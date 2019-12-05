@@ -9,13 +9,11 @@
 
 volatile sig_atomic_t caught_sig = 0;
 
-static void signal_handler(int which)
-{
+static void signal_handler(int which) {
     caught_sig = which;
 }
 
-static int wait_for_process(pid_t pid)
-{
+static int wait_for_process(pid_t pid) {
     int rv = EX_SOFTWARE;
     int status = 0;
     int i = 0;
@@ -24,12 +22,12 @@ static int wait_for_process(pid_t pid)
     sig_handler.sa_handler = signal_handler;
     sig_handler.sa_flags = 0;
 
-    sigaction(SIGALRM, &sig_handler, NULL);
-    sigaction(SIGHUP, &sig_handler, NULL);
-    sigaction(SIGINT, &sig_handler, NULL);
-    sigaction(SIGUSR1, &sig_handler, NULL);
-    sigaction(SIGTERM, &sig_handler, NULL);
-    sigaction(SIGPIPE, &sig_handler, NULL);
+    sigaction(SIGALRM, &sig_handler, nullptr);
+    sigaction(SIGHUP, &sig_handler, nullptr);
+    sigaction(SIGINT, &sig_handler, nullptr);
+    sigaction(SIGUSR1, &sig_handler, nullptr);
+    sigaction(SIGTERM, &sig_handler, nullptr);
+    sigaction(SIGPIPE, &sig_handler, nullptr);
 
     /* Loop forever waiting for the process to quit */
     for (i = 0; ;i++) {
@@ -68,8 +66,7 @@ static int wait_for_process(pid_t pid)
     return rv;
 }
 
-static int spawn_and_wait(char **argv)
-{
+static int spawn_and_wait(char **argv) {
     int rv = EX_SOFTWARE;
     pid_t pid = fork();
 
@@ -89,8 +86,7 @@ static int spawn_and_wait(char **argv)
     return rv;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int naptime = 0;
     assert(argc > 2);
 

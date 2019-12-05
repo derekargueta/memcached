@@ -1,5 +1,4 @@
-#ifndef AUTHFILE_H
-#define AUTHFILE_H
+#pragma once
 
 enum authfile_ret {
     AUTHFILE_OK = 0,
@@ -12,5 +11,3 @@ enum authfile_ret {
 // FIXME: mc_authfile or something?
 enum authfile_ret authfile_load(const char *file);
 int authfile_check(const char *user, const char *pass);
-
-#endif /* AUTHFILE_H */

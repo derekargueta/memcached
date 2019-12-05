@@ -1,6 +1,5 @@
 /* slabs memory allocation */
-#ifndef SLABS_H
-#define SLABS_H
+#pragma once
 
 /** Init the subsystem. 1st argument is the limit on no. of bytes to allocate,
     0 if no limit. 2nd argument is the growth factor; each slab will use a chunk
@@ -11,7 +10,7 @@
 void slabs_init(const size_t limit, const double factor, const bool prealloc, const uint32_t *slab_sizes, void *mem_base_external, bool reuse_mem);
 
 /** Call only during init. Pre-allocates all available memory */
-void slabs_prefill_global(void);
+void slabs_prefill_global();
 
 /**
  * Given object size, return id to use when allocating/freeing memory for object
@@ -46,11 +45,11 @@ void slabs_stats(ADD_STAT add_stats, void *c);
 /* Hints as to freespace in slab class */
 unsigned int slabs_available_chunks(unsigned int id, bool *mem_flag, unsigned int *chunks_perslab);
 
-void slabs_mlock(void);
-void slabs_munlock(void);
+void slabs_mlock();
+void slabs_munlock();
 
-int start_slab_maintenance_thread(void);
-void stop_slab_maintenance_thread(void);
+int start_slab_maintenance_thread();
+void stop_slab_maintenance_thread();
 
 enum reassign_result_type {
     REASSIGN_OK=0, REASSIGN_RUNNING, REASSIGN_BADCLASS, REASSIGN_NOSPARE,
@@ -59,8 +58,8 @@ enum reassign_result_type {
 
 enum reassign_result_type slabs_reassign(int src, int dst);
 
-void slabs_rebalancer_pause(void);
-void slabs_rebalancer_resume(void);
+void slabs_rebalancer_pause();
+void slabs_rebalancer_resume();
 
 #ifdef EXTSTORE
 void slabs_set_storage(void *arg);
@@ -68,5 +67,3 @@ void slabs_set_storage(void *arg);
 
 /* Fixup for restartable code. */
 unsigned int slabs_fixup(char *chunk, const int border);
-
-#endif

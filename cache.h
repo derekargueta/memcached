@@ -1,11 +1,10 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
-#ifndef CACHE_H
-#define CACHE_H
+#pragma once
 #include <pthread.h>
 
 #ifdef HAVE_UMEM_H
 #include <umem.h>
-#define cache_t umem_cache_t
+using umem_cache_t = cache_t;
 #define cache_alloc(a) umem_cache_alloc(a, UMEM_DEFAULT)
 #define do_cache_alloc(a) umem_cache_alloc(a, UMEM_DEFAULT)
 #define cache_free(a, b) umem_cache_free(a, b)
@@ -114,6 +113,4 @@ void* do_cache_alloc(cache_t* handle);
  */
 void cache_free(cache_t* handle, void* ptr);
 void do_cache_free(cache_t* handle, void* ptr);
-#endif
-
 #endif

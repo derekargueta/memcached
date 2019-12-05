@@ -10,24 +10,24 @@
 #include "cache.h"
 
 #ifndef NDEBUG
-const uint64_t redzone_pattern = 0xdeadbeefcafebabe;
+static constexpr uint64_t redzone_pattern = 0xdeadbeefcafebabe;
 int cache_error = 0;
 #endif
 
-const int initial_pool_size = 64;
+static constexpr int initial_pool_size = 64;
 
 cache_t* cache_create(const char *name, size_t bufsize, size_t align,
                       cache_constructor_t* constructor,
                       cache_destructor_t* destructor) {
-    cache_t* ret = calloc(1, sizeof(cache_t));
+    cache_t* ret = static_cast<cache_t*>(calloc(1, sizeof(cache_t)));
     char* nm = strdup(name);
-    void** ptr = calloc(initial_pool_size, sizeof(void*));
-    if (ret == NULL || nm == NULL || ptr == NULL ||
-        pthread_mutex_init(&ret->mutex, NULL) == -1) {
+    void** ptr = static_cast<void**>(calloc(initial_pool_size, sizeof(void*)));
+    if (ret == nullptr || nm == nullptr || ptr == nullptr ||
+        pthread_mutex_init(&ret->mutex, nullptr) == -1) {
         free(ret);
         free(nm);
         free(ptr);
-        return NULL;
+        return nullptr;
     }
 
     ret->name = nm;
@@ -47,10 +47,10 @@ cache_t* cache_create(const char *name, size_t bufsize, size_t align,
 
 static inline void* get_object(void *ptr) {
 #ifndef NDEBUG
-    uint64_t *pre = ptr;
-    return pre + 1;
+    uint64_t *pre = static_cast<uint64_t*>(ptr);
+    return static_cast<void*>(pre + 1);
 #else
-    return ptr;
+    return static_cast<void*>(ptr);
 #endif
 }
 
@@ -84,21 +84,21 @@ void* do_cache_alloc(cache_t *cache) {
         object = get_object(ret);
     } else {
         object = ret = malloc(cache->bufsize);
-        if (ret != NULL) {
+        if (ret != nullptr) {
             object = get_object(ret);
 
-            if (cache->constructor != NULL &&
-                cache->constructor(object, NULL, 0) != 0) {
+            if (cache->constructor != nullptr &&
+                cache->constructor(object, nullptr, 0) != 0) {
                 free(ret);
-                object = NULL;
+                object = nullptr;
             }
         }
     }
 
 #ifndef NDEBUG
-    if (object != NULL) {
+    if (object != nullptr) {
         /* add a simple form of buffer-check */
-        uint64_t *pre = ret;
+        uint64_t *pre = static_cast<uint64_t*>(ret);
         *pre = redzone_pattern;
         ret = pre+1;
         memcpy(((char*)ret) + cache->bufsize - (2 * sizeof(redzone_pattern)),
@@ -124,7 +124,7 @@ void do_cache_free(cache_t *cache, void *ptr) {
         cache_error = 1;
         return;
     }
-    uint64_t *pre = ptr;
+    uint64_t *pre = static_cast<uint64_t*>(ptr);
     --pre;
     if (*pre != redzone_pattern) {
         raise(SIGABRT);
@@ -137,8 +137,8 @@ void do_cache_free(cache_t *cache, void *ptr) {
         cache->ptr[cache->freecurr++] = ptr;
     } else {
         /* try to enlarge free connections array */
-        size_t newtotal = cache->freetotal * 2;
-        void **new_free = realloc(cache->ptr, sizeof(char *) * newtotal);
+        const size_t newtotal = cache->freetotal * 2;
+        void **new_free = static_cast<void**>(realloc(cache->ptr, sizeof(char *) * newtotal));
         if (new_free) {
             cache->freetotal = newtotal;
             cache->ptr = new_free;
@@ -152,4 +152,3 @@ void do_cache_free(cache_t *cache, void *ptr) {
         }
     }
 }
-

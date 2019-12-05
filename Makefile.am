@@ -8,7 +8,7 @@ testapp_SOURCES = testapp.c util.c util.h
 
 timedrun_SOURCES = timedrun.c
 
-memcached_SOURCES = memcached.c memcached.h \
+memcached_SOURCES = memcached.cc memcached.h \
                     hash.c hash.h \
                     jenkins_hash.c jenkins_hash.h \
                     murmur3_hash.c murmur3_hash.h \

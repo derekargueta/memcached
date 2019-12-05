@@ -48,12 +48,12 @@ void stats_prefix_clear() {
 
     for (i = 0; i < PREFIX_HASH_SIZE; i++) {
         PREFIX_STATS *cur, *next;
-        for (cur = prefix_stats[i]; cur != NULL; cur = next) {
+        for (cur = prefix_stats[i]; cur != nullptr; cur = next) {
             next = cur->next;
             free(cur->prefix);
             free(cur);
         }
-        prefix_stats[i] = NULL;
+        prefix_stats[i] = nullptr;
     }
     num_prefixes = 0;
     total_prefix_size = 0;
@@ -63,14 +63,14 @@ void stats_prefix_clear() {
  * Returns the stats structure for a prefix, creating it if it's not already
  * in the list.
  */
-/*@null@*/
+/*@nullptr@*/
 static PREFIX_STATS *stats_prefix_find(const char *key, const size_t nkey) {
     PREFIX_STATS *pfs;
     uint32_t hashval;
     size_t length;
     bool bailout = true;
 
-    assert(key != NULL);
+    assert(key != nullptr);
 
     for (length = 0; length < nkey && key[length] != '\0'; length++) {
         if (key[length] == settings.prefix_delimiter) {
@@ -80,27 +80,27 @@ static PREFIX_STATS *stats_prefix_find(const char *key, const size_t nkey) {
     }
 
     if (bailout) {
-        return NULL;
+        return nullptr;
     }
 
     hashval = hash(key, length) % PREFIX_HASH_SIZE;
 
-    for (pfs = prefix_stats[hashval]; NULL != pfs; pfs = pfs->next) {
+    for (pfs = prefix_stats[hashval]; nullptr != pfs; pfs = pfs->next) {
         if (strncmp(pfs->prefix, key, length) == 0)
             return pfs;
     }
 
-    pfs = calloc(sizeof(PREFIX_STATS), 1);
-    if (NULL == pfs) {
+    pfs = static_cast<PREFIX_STATS*>(calloc(sizeof(PREFIX_STATS), 1));
+    if (nullptr == pfs) {
         perror("Can't allocate space for stats structure: calloc");
-        return NULL;
+        return nullptr;
     }
 
-    pfs->prefix = malloc(length + 1);
-    if (NULL == pfs->prefix) {
+    pfs->prefix = static_cast<char*>(malloc(length + 1));
+    if (nullptr == pfs->prefix) {
         perror("Can't allocate space for copy of prefix: malloc");
         free(pfs);
-        return NULL;
+        return nullptr;
     }
 
     strncpy(pfs->prefix, key, length);
@@ -124,7 +124,7 @@ void stats_prefix_record_get(const char *key, const size_t nkey, const bool is_h
 
     STATS_LOCK();
     pfs = stats_prefix_find(key, nkey);
-    if (NULL != pfs) {
+    if (nullptr != pfs) {
         pfs->num_gets++;
         if (is_hit) {
             pfs->num_hits++;
@@ -141,7 +141,7 @@ void stats_prefix_record_delete(const char *key, const size_t nkey) {
 
     STATS_LOCK();
     pfs = stats_prefix_find(key, nkey);
-    if (NULL != pfs) {
+    if (nullptr != pfs) {
         pfs->num_deletes++;
     }
     STATS_UNLOCK();
@@ -155,7 +155,7 @@ void stats_prefix_record_set(const char *key, const size_t nkey) {
 
     STATS_LOCK();
     pfs = stats_prefix_find(key, nkey);
-    if (NULL != pfs) {
+    if (nullptr != pfs) {
         pfs->num_sets++;
     }
     STATS_UNLOCK();
@@ -164,12 +164,11 @@ void stats_prefix_record_set(const char *key, const size_t nkey) {
 /*
  * Returns stats in textual form suitable for writing to a client.
  */
-/*@null@*/
+/*@nullptr@*/
 char *stats_prefix_dump(int *length) {
     const char *format = "PREFIX %s get %llu hit %llu set %llu del %llu\r\n";
     PREFIX_STATS *pfs;
-    char *buf;
-    int i, pos;
+    int pos;
     size_t size = 0, written = 0, total_written = 0;
 
     /*
@@ -183,16 +182,16 @@ char *stats_prefix_dump(int *length) {
            num_prefixes * (strlen(format) - 2 /* %s */
                            + 4 * (20 - 4)) /* %llu replaced by 20-digit num */
                            + sizeof("END\r\n");
-    buf = malloc(size);
-    if (NULL == buf) {
+    auto buf = static_cast<char*>(malloc(size));
+    if (nullptr == buf) {
         perror("Can't allocate stats response: malloc");
         STATS_UNLOCK();
-        return NULL;
+        return nullptr;
     }
 
     pos = 0;
-    for (i = 0; i < PREFIX_HASH_SIZE; i++) {
-        for (pfs = prefix_stats[i]; NULL != pfs; pfs = pfs->next) {
+    for (int i = 0; i < PREFIX_HASH_SIZE; i++) {
+        for (pfs = prefix_stats[i]; nullptr != pfs; pfs = pfs->next) {
             written = snprintf(buf + pos, size-pos, format,
                            pfs->prefix, pfs->num_gets, pfs->num_hits,
                            pfs->num_sets, pfs->num_deletes);
@@ -229,13 +228,13 @@ static void test_equals_ptr(char *what, void *a, void *b) { test_count++; if (a 
 static void test_equals_str(char *what, const char *a, const char *b) { test_count++; if (strcmp(a, b)) fail(what); }
 static void test_equals_ull(char *what, uint64_t a, uint64_t b) { test_count++; if (a != b) fail(what); }
 static void test_notequals_ptr(char *what, void *a, void *b) { test_count++; if (a == b) fail(what); }
-static void test_notnull_ptr(char *what, void *a) { test_count++; if (NULL == a) fail(what); }
+static void test_notnullptr_ptr(char *what, void *a) { test_count++; if (nullptr == a) fail(what); }
 
 static void test_prefix_find() {
     PREFIX_STATS *pfs1, *pfs2;
 
     pfs1 = stats_prefix_find("abc");
-    test_notnull_ptr("initial prefix find", pfs1);
+    test_notnullptr_ptr("initial prefix find", pfs1);
     test_equals_ull("request counts", 0ULL,
         pfs1->num_gets + pfs1->num_sets + pfs1->num_deletes + pfs1->num_hits);
     pfs2 = stats_prefix_find("abc");

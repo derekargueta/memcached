@@ -15,13 +15,11 @@
 
 #include "bipbuffer.h"
 
-static size_t bipbuf_sizeof(const unsigned int size)
-{
+static size_t bipbuf_sizeof(const unsigned int size) {
     return sizeof(bipbuf_t) + size;
 }
 
-int bipbuf_unused(const bipbuf_t* me)
-{
+int bipbuf_unused(const bipbuf_t* me) {
     if (1 == me->b_inuse)
         /* distance between region B and region A */
         return me->a_start - me->b_end;
@@ -29,18 +27,15 @@ int bipbuf_unused(const bipbuf_t* me)
         return me->size - me->a_end;
 }
 
-int bipbuf_size(const bipbuf_t* me)
-{
+int bipbuf_size(const bipbuf_t* me) {
     return me->size;
 }
 
-int bipbuf_used(const bipbuf_t* me)
-{
+int bipbuf_used(const bipbuf_t* me) {
     return (me->a_end - me->a_start) + me->b_end;
 }
 
-void bipbuf_init(bipbuf_t* me, const unsigned int size)
-{
+void bipbuf_init(bipbuf_t* me, const unsigned int size) {
     me->a_start = me->a_end = me->b_end = 0;
     me->size = size;
     me->b_inuse = 0;
@@ -48,7 +43,7 @@ void bipbuf_init(bipbuf_t* me, const unsigned int size)
 
 bipbuf_t *bipbuf_new(const unsigned int size)
 {
-    bipbuf_t *me = malloc(bipbuf_sizeof(size));
+    bipbuf_t *me = static_cast<bipbuf_t*>(malloc(bipbuf_sizeof(size)));
     if (!me)
         return NULL;
     bipbuf_init(me, size);
@@ -60,22 +55,19 @@ void bipbuf_free(bipbuf_t* me)
     free(me);
 }
 
-int bipbuf_is_empty(const bipbuf_t* me)
-{
+int bipbuf_is_empty(const bipbuf_t* me) {
     return me->a_start == me->a_end;
 }
 
 /* find out if we should turn on region B
  * ie. is the distance from A to buffer's end less than B to A? */
-static void __check_for_switch_to_b(bipbuf_t* me)
-{
+static void __check_for_switch_to_b(bipbuf_t* me) {
     if (me->size - me->a_end < me->a_start - me->b_end)
         me->b_inuse = 1;
 }
 
 /* TODO: DOCUMENT THESE TWO FUNCTIONS */
-unsigned char *bipbuf_request(bipbuf_t* me, const int size)
-{
+unsigned char *bipbuf_request(bipbuf_t* me, const int size) {
     if (bipbuf_unused(me) < size)
         return 0;
     if (1 == me->b_inuse)
@@ -88,8 +80,7 @@ unsigned char *bipbuf_request(bipbuf_t* me, const int size)
     }
 }
 
-int bipbuf_push(bipbuf_t* me, const int size)
-{
+int bipbuf_push(bipbuf_t* me, const int size) {
     if (bipbuf_unused(me) < size)
         return 0;
 
@@ -133,39 +124,38 @@ unsigned char *bipbuf_peek(const bipbuf_t* me, const unsigned int size)
     if (me->size < me->a_start + size)
         return NULL;
 
-    if (bipbuf_is_empty(me))
-        return NULL;
+    if (bipbuf_is_empty(me)) {
+        return nullptr;
+    }
 
     return (unsigned char *)me->data + me->a_start;
 }
 
-unsigned char *bipbuf_peek_all(const bipbuf_t* me, unsigned int *size)
-{
-    if (bipbuf_is_empty(me))
-        return NULL;
+unsigned char *bipbuf_peek_all(const bipbuf_t* me, unsigned int *size) {
+    if (bipbuf_is_empty(me)) {
+        return nullptr;
+    }
 
     *size = me->a_end - me->a_start;
     return (unsigned char*)me->data + me->a_start;
 }
 
-unsigned char *bipbuf_poll(bipbuf_t* me, const unsigned int size)
-{
+unsigned char *bipbuf_poll(bipbuf_t* me, const unsigned int size) {
     if (bipbuf_is_empty(me))
-        return NULL;
+        return nullptr;
 
     /* make sure we can actually poll this data */
-    if (me->size < me->a_start + size)
-        return NULL;
+    if (me->size < me->a_start + size) {
+        return nullptr;
+    }
 
     void *end = me->data + me->a_start;
     me->a_start += size;
 
     /* we seem to be empty.. */
-    if (me->a_start == me->a_end)
-    {
+    if (me->a_start == me->a_end) {
         /* replace a with region b */
-        if (1 == me->b_inuse)
-        {
+        if (1 == me->b_inuse) {
             me->a_start = 0;
             me->a_end = me->b_end;
             me->b_end = me->b_inuse = 0;
@@ -176,5 +166,5 @@ unsigned char *bipbuf_poll(bipbuf_t* me, const unsigned int size)
     }
 
     __check_for_switch_to_b(me);
-    return end;
+    return static_cast<unsigned char*>(end);
 }

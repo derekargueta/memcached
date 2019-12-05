@@ -10,9 +10,9 @@
 
 // TODO: frontend needs a refactor so this can avoid global objects.
 
-#define MAX_ENTRY_LEN 256
+static constexpr int MAX_ENTRY_LEN = 256;
 // Not supposed to be a huge database!
-#define MAX_ENTRIES 8
+static constexpr int MAX_ENTRIES = 8;
 
 typedef struct auth_entry {
     char *user;
@@ -23,25 +23,25 @@ typedef struct auth_entry {
 
 auth_t main_auth_entries[MAX_ENTRIES];
 int entry_cnt = 0;
-char *main_auth_data = NULL;
+char *main_auth_data = nullptr;
 
 enum authfile_ret authfile_load(const char *file) {
     struct stat sb;
-    char *auth_data = NULL;
+    char *auth_data = nullptr;
     auth_t auth_entries[MAX_ENTRIES];
 
     if (stat(file, &sb) == -1) {
         return AUTHFILE_MISSING;
     }
 
-    auth_data = calloc(1, sb.st_size);
+    auth_data = static_cast<char*>(calloc(1, sb.st_size));
 
-    if (auth_data == NULL) {
+    if (auth_data == nullptr) {
         return AUTHFILE_OOM;
     }
 
     FILE *pwfile = fopen(file, "r");
-    if (pwfile == NULL) {
+    if (pwfile == nullptr) {
         // not strictly necessary but to be safe.
         free(auth_data);
         return AUTHFILE_OPENFAIL;
@@ -51,7 +51,7 @@ enum authfile_ret authfile_load(const char *file) {
     auth_t *entry_cur = auth_entries;
     int used = 0;
 
-    while ((fgets(auth_cur, MAX_ENTRY_LEN, pwfile)) != NULL) {
+    while ((fgets(auth_cur, MAX_ENTRY_LEN, pwfile)) != nullptr) {
         int x;
         int found = 0;
 
@@ -93,7 +93,7 @@ enum authfile_ret authfile_load(const char *file) {
 
     // swap the main pointer out now, so if there's an error reloading we
     // don't break the existing authentication.
-    if (main_auth_data != NULL) {
+    if (main_auth_data != nullptr) {
         free(main_auth_data);
     }
 
@@ -108,8 +108,8 @@ enum authfile_ret authfile_load(const char *file) {
 
 // if only loading the file could be this short...
 int authfile_check(const char *user, const char *pass) {
-    size_t ulen = strlen(user);
-    size_t plen = strlen(pass);
+    const size_t ulen = strlen(user);
+    const size_t plen = strlen(pass);
 
     for (int x = 0; x < entry_cnt; x++) {
         auth_t *e = &main_auth_entries[x];

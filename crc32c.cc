@@ -54,8 +54,7 @@ static pthread_once_t crc32c_once_sw = PTHREAD_ONCE_INIT;
 static uint32_t crc32c_table[8][256];
 
 /* Construct table for software CRC-32C calculation. */
-static void crc32c_init_sw(void)
-{
+static void crc32c_init_sw() {
     uint32_t n, crc, k;
 
     for (n = 0; n < 256; n++) {
@@ -84,7 +83,7 @@ static void crc32c_init_sw(void)
    as is the case on Intel processors that the assembler code here is for. */
 static uint32_t crc32c_sw(uint32_t crci, const void *buf, size_t len)
 {
-    const unsigned char *next = buf;
+    const unsigned char *next = static_cast<const unsigned char*>(buf);
     uint64_t crc;
 
     pthread_once(&crc32c_once_sw, crc32c_init_sw);
@@ -187,12 +186,10 @@ static inline uint32_t gf2_matrix_times(uint32_t *mat, uint32_t vec)
 
 /* Multiply a matrix by itself over GF(2).  Both mat and square must have 32
    rows. */
-static inline void gf2_matrix_square(uint32_t *square, uint32_t *mat)
-{
-    int n;
-
-    for (n = 0; n < 32; n++)
+static inline void gf2_matrix_square(uint32_t *square, uint32_t *mat) {
+    for (int n = 0; n < 32; n++) {
         square[n] = gf2_matrix_times(mat, mat[n]);
+    }
 }
 
 /* Construct an operator to apply len zeros to a crc.  len must be a power of
@@ -200,16 +197,14 @@ static inline void gf2_matrix_square(uint32_t *square, uint32_t *mat)
    largest power of two less than len.  The result for len == 0 is the same as
    for len == 1.  A version of this routine could be easily written for any
    len, but that is not needed for this application. */
-static void crc32c_zeros_op(uint32_t *even, size_t len)
-{
-    int n;
+static void crc32c_zeros_op(uint32_t *even, size_t len) {
     uint32_t row;
     uint32_t odd[32];       /* odd-power-of-two zeros operator */
 
     /* put operator for one zero bit in odd */
     odd[0] = POLY;              /* CRC-32C polynomial */
     row = 1;
-    for (n = 1; n < 32; n++) {
+    for (int n = 1; n < 32; n++) {
         odd[n] = row;
         row <<= 1;
     }
@@ -226,26 +221,26 @@ static void crc32c_zeros_op(uint32_t *even, size_t len)
     do {
         gf2_matrix_square(even, odd);
         len >>= 1;
-        if (len == 0)
+        if (len == 0) {
             return;
+        }
         gf2_matrix_square(odd, even);
         len >>= 1;
     } while (len);
 
     /* answer ended up in odd -- copy to even */
-    for (n = 0; n < 32; n++)
+    for (int n = 0; n < 32; n++) {
         even[n] = odd[n];
+    }
 }
 
 /* Take a length and build four lookup tables for applying the zeros operator
    for that length, byte-by-byte on the operand. */
-static void crc32c_zeros(uint32_t zeros[][256], size_t len)
-{
-    uint32_t n;
+static void crc32c_zeros(uint32_t zeros[][256], size_t len) {
     uint32_t op[32];
 
     crc32c_zeros_op(op, len);
-    for (n = 0; n < 256; n++) {
+    for (uint32_t n = 0; n < 256; n++) {
         zeros[0][n] = gf2_matrix_times(op, n);
         zeros[1][n] = gf2_matrix_times(op, n << 8);
         zeros[2][n] = gf2_matrix_times(op, n << 16);
@@ -254,8 +249,7 @@ static void crc32c_zeros(uint32_t zeros[][256], size_t len)
 }
 
 /* Apply the zeros operator table to crc. */
-static inline uint32_t crc32c_shift(uint32_t zeros[][256], uint32_t crc)
-{
+static inline uint32_t crc32c_shift(uint32_t zeros[][256], uint32_t crc) {
     return zeros[0][crc & 0xff] ^ zeros[1][(crc >> 8) & 0xff] ^
            zeros[2][(crc >> 16) & 0xff] ^ zeros[3][crc >> 24];
 }
@@ -263,10 +257,10 @@ static inline uint32_t crc32c_shift(uint32_t zeros[][256], uint32_t crc)
 /* Block sizes for three-way parallel crc computation.  LONG and SHORT must
    both be powers of two.  The associated string constants must be set
    accordingly, for use in constructing the assembler instructions. */
-#define LONG 8192
+static constexpr int LONG = 8192;
 #define LONGx1 "8192"
 #define LONGx2 "16384"
-#define SHORT 256
+static constexpr int SHORT = 256;
 #define SHORTx1 "256"
 #define SHORTx2 "512"
 
@@ -276,24 +270,22 @@ static uint32_t crc32c_long[4][256];
 static uint32_t crc32c_short[4][256];
 
 /* Initialize tables for shifting crcs. */
-static void crc32c_init_hw(void)
-{
+static void crc32c_init_hw() {
     crc32c_zeros(crc32c_long, LONG);
     crc32c_zeros(crc32c_short, SHORT);
 }
 
 /* Compute CRC-32C using the Intel hardware instruction. */
-static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
-{
-    const unsigned char *next = buf;
+static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len) {
+    const unsigned char *next = static_cast<const unsigned char*>(buf);
     const unsigned char *end;
-    uint64_t crc0, crc1, crc2;      /* need to be 64 bits for crc32q */
+    uint64_t crc1, crc2;      /* need to be 64 bits for crc32q */
 
     /* populate shift tables the first time through */
     pthread_once(&crc32c_once_hw, crc32c_init_hw);
 
     /* pre-process the crc */
-    crc0 = crc ^ 0xffffffff;
+    uint64_t crc0 = crc ^ 0xffffffff;
 
     /* compute the crc for up to seven leading bytes to bring the data pointer
        to an eight-byte boundary */
@@ -368,7 +360,7 @@ static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
     }
 
     /* return a post-processed crc */
-    return (uint32_t)crc0 ^ 0xffffffff;
+    return static_cast<uint32_t>(crc0 ^ 0xffffffff);
 }
 
 /* Check for SSE 4.2.  SSE 4.2 was first supported in Nehalem processors
@@ -390,7 +382,7 @@ static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
 #endif
 /* Compute a CRC-32C.  If the crc32 instruction is available, use the hardware
    version.  Otherwise, use the software version. */
-void crc32c_init(void) {
+void crc32c_init() {
     #if defined(__X86_64__)||defined(__x86_64__)||defined(__ia64__)
     int sse42;
     SSE42(sse42);
